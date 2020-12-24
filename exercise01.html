@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+    <head>
+        <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+        <style>
+
+            #container {
+                width: 1200px;
+                margin: auto;
+                text-align: center;
+                padding: 20px;
+                font-family: arial;
+            }
+
+            .playerContainer {
+                height: 200px;
+                width: 49%;
+                display: inline-block;
+            }
+
+            #healthContainer {
+                background-color: grey;
+                height: 40px;
+                width: 400px;
+                margin: auto;  
+            }
+
+            .healthLeftContainer {
+                background-color: green;
+                height: 40px;
+                width: 100%;
+            }
+
+            .health {
+                color: white;
+                position: absolute;
+                margin-top: 10px;
+            }
+
+            #controlsContainer {
+                border: 1px solid rgb(179, 178, 178);
+                box-shadow: 2px 2px rgb(179, 178, 178);
+                padding: 30px;
+            }
+
+            .button {
+                font-size: 25px;
+                padding: 15px;
+                border-radius: 10px;
+                box-shadow: 1px 1px black;
+                margin: 10px;
+            }
+
+            #startButton { background-color: rgb(153, 210, 153); }
+            #attackButton { background-color: red; }
+            #specialAttackButton { background-color: orange; }
+            #healButton { background-color: rgb(153, 210, 153); }
+            #giveUpButton { background-color: white; }
+
+            #logContainer {
+                margin-top: 20px;
+                border: 1px solid rgb(179, 178, 178);
+                box-shadow: 2px 2px rgb(179, 178, 178);
+            }
+
+            #logContainer > ul {
+                list-style: none;
+            }
+
+            #logContainer > ul > li > span {
+                display: block;
+                width: 80%;
+                margin: auto;
+            }
+
+        </style>
+    </head>
+
+    <body>
+
+        <div id="container">
+
+            <div id="youContainer" class="playerContainer">
+                <h1>Player</h1>
+                <div id="healthContainer">
+                    <span class="health">{{ playerHealth }}</span>
+                    <div class="healthLeftContainer" :style="[{width: playerHealth + '%'}]"></div>
+                    
+                </div>
+            </div>
+
+            <div id="monsterContainer" class="playerContainer">
+                <h1>MONSTER</h1>
+                <div id="healthContainer">
+                    <span class="health">{{ monsterHealth }}</span>
+                    <div class="healthLeftContainer" :style="[{width: monsterHealth + '%'}]"></div>
+                </div>
+            </div>
+
+            <div id="controlsContainer">
+                <template v-if="!isInGame">
+                    <button id="startButton" class="button" @click="startGame">START NEW GAME</button>
+                </template>
+                <template v-else>
+                    <button id="attackButton" class="button" @click="attack">ATTACK</button>
+                    <button id="specialAttackButton" class="button" @click="specialAttack">SPECIAL ATTACK</button>
+                    <button id="healButton" class="button" @click="heal">HEAL</button>
+                    <button id="giveUpButton" class="button" @click="giveUp">GIVE UP</button>
+                </template>
+            </div>
+
+            <div id="logContainer" v-if="turns.length > 0">
+                <ul>
+                    <li v-for="turn in turns">
+                        <span :style="{'background-color': '#e4e8ff', 'color': 'blue'}" v-if="turn.isPlayer">{{ turn.text }}</span>
+                        <span :style="{'background-color': '#ffc0c1', 'color': 'red'}" v-if="!turn.isPlayer">{{ turn.text }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <script>
+            new Vue({
+                el: "#container",
+                data: {
+                    isInGame: false,
+                    playerHealth: 0,
+                    monsterHealth: 0,
+                    turns: [],
+                },
+                methods: {
+                    startGame: function() {
+                        this.isInGame = true;
+                        this.playerHealth = 100;
+                        this.monsterHealth = 100;
+                        this.turns = [];
+                    },
+                    attack: function() {
+                        var damage = this.calculateDamage(3, 10);
+                        this.monsterHealth -= damage
+                        this.turns.unshift({
+                            isPlayer: true,
+                            text: 'Player hits Monster for ' + damage,
+                        });
+                        if ( this.checkWin() ) {
+                            return;
+                        }
+
+                        this.monsterAttacks();
+                    },
+                    specialAttack: function() {
+                        var damage = this.calculateDamage(10, 20);
+                        this.monsterHealth -= damage;
+                        this.turns.unshift({
+                            isPlayer: true,
+                            text: 'Player hits Monster hard for ' + damage,
+                        });
+                        if (this.checkWin()) {
+                            return;
+                        }
+
+                        this.monsterAttacks();
+
+                    },
+                    heal: function() {
+                        if ( this.playerHealth <= 90) {
+                            this.playerHealth += 10;
+                        } else {
+                            this.playerHealth = 100;
+                        }
+                        this.turns.unshift({
+                            isPlayer: true,
+                            text: 'Player heals for 10',
+                        });
+                        this.monsterAttacks();
+                    },
+                    giveUp: function () {
+                        this.isInGame = false;
+                        this.playerHealth = 0;
+                        this.monsterHealth = 0;
+                        this.turns = [];
+                    },
+                    monsterAttacks: function() {
+                        var damage = this.calculateDamage(5, 12);
+                        this.playerHealth -= damage;
+                        this.turns.unshift({
+                            isPlayer: false,
+                            text: 'Monster hits Player for ' + damage,
+                        })
+                        this.checkWin();
+                    },
+                    calculateDamage: function(min, max) {
+                        return Math.max(Math.floor(Math.random() * max) + 1, min);
+                    },
+                    checkWin: function() {
+                        if (this.monsterHealth <= 0) {
+                            if (confirm('You won! New Game?')) {
+                                this.startGame();
+                            } else {
+                                this.isInGame = false;
+                            } 
+                            return true;
+                        } else if (this.playerHealth <= 0) {
+                            if (confirm('You lost! New Game?')) {
+                                this.startGame();
+                            } else {
+                                this.isInGame = false;
+                            }
+                            return true;
+                        }
+                        return false;
+                    }
+                },
+                computed: {
+
+                }
+            });
+        </script>
+    </body>
+</html>
